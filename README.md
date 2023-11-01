@@ -2,7 +2,7 @@
 NF docker AWS pipe for ONT reads at BB
 
 
-### run it like this
+### Notes for launching a test run
 **Oct 19 2023**  
 Test pipeline with 
 
@@ -19,3 +19,5 @@ Orders_Q8D_4_Pool_4.fastq
 ```
 
 These files are in `s3://bb-aws-genomics-workflows-store/rawdata/nanopore_data/misc/`. 
+
+The plasmid reference fasta file that is suitable for testing is in this dir `s3://bb-aws-genomics-workflows-store/nf-pipeline-testing/`
