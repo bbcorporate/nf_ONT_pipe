@@ -18,3 +18,4 @@ Orders_Q8D_3_Pool_3.fastq
 Orders_Q8D_4_Pool_4.fastq
 ```
 
+These files are in `s3://bb-aws-genomics-workflows-store/rawdata/nanopore_data/misc/`. 
