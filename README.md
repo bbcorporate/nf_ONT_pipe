@@ -2,7 +2,7 @@
 NF docker AWS pipe for ONT reads at BB
 
 
-### run it like this
+### Notes for launching a test run
 **Oct 19 2023**  
 Test pipeline with 
 
