@@ -1,5 +1,5 @@
 
-// Birch biosciences ONT processing NF pipeline script
+// BB ONT processing NF pipeline script
 
 // this version:-
 // 	works with a container from docker hub instead of local
