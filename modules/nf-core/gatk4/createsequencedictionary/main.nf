@@ -21,7 +21,7 @@ process GATK4_CREATESEQUENCEDICTIONARY {
     script:
     def args = task.ext.args ?: ''
 
-    def avail_mem = 6144
+    def avail_mem = 1024 // was 6144 (=6Mb x 1024)
     if (!task.memory) {
         log.info '[GATK CreateSequenceDictionary] Available memory not known - defaulting to 6GB. Specify process memory requirements to change this.'
     } else {
