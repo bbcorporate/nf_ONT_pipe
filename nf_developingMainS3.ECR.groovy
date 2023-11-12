@@ -79,11 +79,11 @@ process bcftools_csq {
     path gatk_vcf_out
     
     output:
-    path '*.csq.ann.vcf'
+    path "${gatk_vcf_out}.csq.ann.vcf"
 
     script:
     """
-bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o out.csq.ann.vcf ${gatk_vcf_out} 
+bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out}.csq.ann.vcf ${gatk_vcf_out} 
 """
 }
 
@@ -97,11 +97,11 @@ process ngmlr {
     path this_ht   // ngm index file
     
     output:
-    path "out.ngmlr.rg.sam"
+    path "${this_fq}.ngmlr.rg.sam"
     
     script:
     """
-ngmlr -x ont -r ${this_ref} -q ${this_fq} -o out.ngmlr.rg.sam  --rg-id Orders_Q8D_1_Pool_1  --rg-sm sample1  --rg-lb library1  --rg-pl ONT -t 8
+ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Orders_Q8D_1_Pool_1  --rg-sm sample1  --rg-lb library1  --rg-pl ONT -t 8
 """
 
 }
@@ -113,14 +113,14 @@ process samtools_post_process {
     path this_sam
     
     output:
-    path "out.ngmlr.rg.sort.bam", emit: sorted_bam_out
-    path "out.ngmlr.rg.sort.bam.bai", emit: sorted_bam_out_bai
+    path "${this_sam}.rg.sort.bam", emit: sorted_bam_out
+    path "${this_sam}.rg.sort.bam.bai", emit: sorted_bam_out_bai
     
     script:
     """
 samtools view -b $this_sam > out.ngmlr.rg.bam
-samtools sort out.ngmlr.rg.bam > out.ngmlr.rg.sort.bam
-samtools index out.ngmlr.rg.sort.bam
+samtools sort out.ngmlr.rg.bam > ${this_sam}.rg.sort.bam
+samtools index ${this_sam}.rg.sort.bam
 """
 }
 
@@ -173,12 +173,12 @@ process haplotype_caller {
     path path_ref_index
     path path_ref_dict
     output:
-    path 'gatk.*.vcf'
+    path "${sorted_bam}.vcf"
 
     script:
     
-	""" date && 
-gatk HaplotypeCaller -I $sorted_bam -O gatk.out.vcf -R $path_ref  -ploidy ${params.ploidy} -L $intervals  --disable-read-filter WellformedReadFilter --do-not-run-physical-phasing true && date
+	"""
+gatk --java-options "-Xmx4g" HaplotypeCaller -I $sorted_bam -O ${sorted_bam}.vcf -R $path_ref  -ploidy ${params.ploidy} -L $intervals  --disable-read-filter WellformedReadFilter --do-not-run-physical-phasing true  --seconds-between-progress-updates 10
 """
     
 }
