@@ -13,7 +13,14 @@ RUN curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2
 RUN unzip awscliv2.zip
 RUN ./aws/install
 
+# use this to authenticate to gitlab? also github?
+# something like this
+# RUN --mount=type=ssh
+# copy bifxdev repo, parts of
+#COPY ../bifxdev/ONT_pipe/*.py /usr/local/bin
+
 # bioinf stuff
+##############
 # ngmlr
 # this release 0.2.7 has a signed integer overflow error
 # **do not use**
@@ -31,4 +38,4 @@ RUN wget https://github.com/samtools/samtools/releases/download/1.18/samtools-1.
 #GATK
 # has its own nf module
 #snpeff
-#has its own nf module
+#has its own nf module, not using, hard to run
