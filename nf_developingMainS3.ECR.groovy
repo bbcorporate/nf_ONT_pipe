@@ -52,7 +52,7 @@ params.path_ref = "${params.s3dir}/${params.ref}"
 params.path_gff3 = "${params.s3dir}/${params.gff3}"
 params.enc = "${params.path_ref}-enc.2.ngm"
 params.ht  = "${params.path_ref}-ht-13-2.2.ngm"
-params.fai = "${params.path_ref}.fai"    // *** this adds .fai to fa filename
+//params.fai = "${params.path_ref}.fai"    // *** this adds .fai to fa filename
 
 println("This is the ONT-UMI pipeline")
 println("===================================")
@@ -71,7 +71,7 @@ println("params.path_ref is: $params.path_ref")
 
 process bcftools_csq {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
-    publishDir = "$launchDir"
+    publishDir = "${params.s3dir}"
     
     input:
     path this_ref
@@ -231,7 +231,7 @@ workflow {
     
     /* THIS WAS THE PREVIOUS WORKFLOW */
 
-    def fq_glob = params.s3dir + '/Orders_Q8D_*.fastq'
+    def fq_glob = params.s3dir + '/Orders_Q8D_*_1.fastq'
     println("fq_glob is: $fq_glob")
     def fq_files = Channel.fromPath( fq_glob )
     //println("fq_files is: $fq_files")
@@ -253,6 +253,7 @@ workflow {
 /*
 //    println("** Overwriting intervals **")
 //    params.intervals = "pBB0212:5400-5450"
+*/
     haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out )
     bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller.out )
 
@@ -261,8 +262,6 @@ workflow {
     //    bcftools_csq( ${params.gatk_vcf_out} )
     // println("Using manually diploidified VCF file")
     // bcftools_csq( "${workflow.launchDir}/out.diploidified.unphased.vcf" )
-
- */
 
 }
 
