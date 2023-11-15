@@ -72,6 +72,7 @@ println("params.path_ref is: $params.path_ref")
 process bcftools_csq {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
     publishDir = "${params.s3dir}"
+    label = [ 'process_low', 'error_retry' ]      
     
     input:
     path this_ref
@@ -89,6 +90,7 @@ bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out
 
 process ngmlr {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    label = [ 'process_medium', 'error_retry' ]
     
     input:
     path this_fq
@@ -108,6 +110,7 @@ ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Or
 
 process samtools_post_process {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    label = [ 'process_medium', 'error_retry' ]    
 	
     input:
     path this_sam
@@ -128,6 +131,7 @@ process index_reference {
     debug true
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
     publishDir = "${params.s3dir}"
+    label = [ 'process_low', 'error_retry' ]
     //stageOutMode = 'copy'
     
     input:
@@ -150,6 +154,7 @@ process create_seq_dict {
     // use the gatk4 container, just not the nf-core modules, which
     // are so slow it's not even a joke
     container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
+    label = [ 'process_medium', 'error_retry' ]    
 
     publishDir = "$launchDir"
     input:
@@ -165,6 +170,8 @@ gatk CreateSequenceDictionary -R $this_ref
 process haplotype_caller {
     container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
     publishDir = "$launchDir"
+    label = [ 'process_medium', 'error_retry' ]
+    
     input:
     path sorted_bam
     path sorted_bam_bai
@@ -172,6 +179,7 @@ process haplotype_caller {
     path path_ref
     path path_ref_index
     path path_ref_dict
+    
     output:
     path "${sorted_bam}.vcf"
 
@@ -187,6 +195,7 @@ gatk --java-options "-Xmx4g" HaplotypeCaller -I $sorted_bam -O ${sorted_bam}.vcf
 
 process foo {
     debug true
+    label = [ 'process_ultralow', 'error_retry' ]
     
     input:
     val x   // not value!!!
@@ -204,6 +213,8 @@ echo "echo data is: '${x}'"
 process zoo {
     debug true
     publishDir = "$launchDir"
+    label = [ 'process_ultralow', 'error_retry' ]
+    
     input:
     path x
     output:
