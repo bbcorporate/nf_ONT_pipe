@@ -242,7 +242,7 @@ workflow {
     
     /* THIS WAS THE PREVIOUS WORKFLOW */
     // fqfile is something like 'gander*_1.fq' but currently points to a single file
-    def fq_glob = params.s3dir + params.fqfile
+    def fq_glob = params.s3dir + '/' +  params.fqfile
     println("fq_glob is: $fq_glob")
     def fq_files = Channel.fromPath( fq_glob )
     //println("fq_files is: $fq_files")
