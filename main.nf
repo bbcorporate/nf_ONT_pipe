@@ -69,6 +69,21 @@ println("params.path_ref is: $params.path_ref")
 // steps with my container
 ///////////////////////////////
 
+process bin_reads_by_umi {
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    publishDir = "${params.s3dir}"
+    input:
+    path this_fq
+    
+    output:
+    path "*cl=*reads.fq"
+
+    script:
+"""
+bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expectedreadlength ${params.expectedreadlength} ${params.extrabinparams} -slop ${params.slop} 
+"""
+}
+
 process bcftools_csq {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
     publishDir = "${params.s3dir}"
@@ -89,6 +104,8 @@ bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out
 }
 
 process ngmlr {
+    cpus 8
+    memory '6 GB'
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
     label = [ 'process_medium', 'error_retry' ]
     
