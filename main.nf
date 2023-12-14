@@ -57,11 +57,11 @@ params.ht  = "${params.path_ref}-ht-13-2.2.ngm"
 println("This is the ONT-UMI pipeline")
 println("===================================")
 
-/*
+
 println("projectDir (main.script.nf in here) is: $projectDir")
 println("launchDir (nf run ... in here) is: $launchDir")
 println("params.path_ref is: $params.path_ref")
- */
+ 
 
 //for debugging
 //System.exit(0)
@@ -70,7 +70,7 @@ println("params.path_ref is: $params.path_ref")
 ///////////////////////////////
 
 process bin_reads_by_umi {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
     publishDir = "${params.s3dir}"
     input:
     path this_fq
@@ -80,12 +80,13 @@ process bin_reads_by_umi {
 
     script:
 """
+echo here!!!!
 bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expectedreadlength ${params.expectedreadlength} ${params.extrabinparams} -slop ${params.slop} 
 """
 }
 
 process bcftools_csq {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
     publishDir = "${params.s3dir}"
     label = [ 'process_low', 'error_retry' ]      
     
@@ -106,7 +107,7 @@ bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out
 process ngmlr {
     cpus 8
     memory '6 GB'
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
     label = [ 'process_medium', 'error_retry' ]
     
     input:
@@ -126,7 +127,7 @@ ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Or
 }
 
 process samtools_post_process {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
     label = [ 'process_medium', 'error_retry' ]    
 	
     input:
@@ -146,7 +147,7 @@ samtools index ${this_sam}.rg.sort.bam
 
 process index_reference {
     debug true
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:ngmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
     publishDir = "${params.s3dir}"
     label = [ 'process_low', 'error_retry' ]
     //stageOutMode = 'copy'
@@ -257,13 +258,17 @@ workflow {
     //Channel.fromPath("seq*") | buffer(size: 4, remainder: true) | zoo
 
     
-    /* THIS WAS THE PREVIOUS WORKFLOW */
-    // fqfile is something like 'gander*_1.fq' but currently points to a single file
+    // working on linking bin_reads
     def fq_glob = params.s3dir + '/' +  params.fqfile
     println("fq_glob is: $fq_glob")
-    def fq_files = Channel.fromPath( fq_glob )
-    //println("fq_files is: $fq_files")
-    //System.exit(0)
+    println("depth is: $params.depth")
+    
+
+    bin_reads_by_umi(fq_glob)
+
+    println("Exiting for now")
+    //System.exit(0)  
+
 
     // can't do this
     //def fasta_ref_channel = Channel.fromPath(params.ref)
@@ -273,7 +278,7 @@ workflow {
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
 
-    //System.exit(0)
+    System.exit(0)
 
     
     ngmlr(fq_files,params.path_ref, params.enc, params.ht)  | samtools_post_process
