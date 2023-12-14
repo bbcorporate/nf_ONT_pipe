@@ -72,6 +72,7 @@ println("params.path_ref is: $params.path_ref")
 process bin_reads_by_umi {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
     publishDir = "${params.s3dir}"
+    println("header")
     input:
     path this_fq
     
@@ -79,8 +80,9 @@ process bin_reads_by_umi {
     path "*cl=*reads.fq"
 
     script:
+    println("in script")
 """
-echo here!!!!
+
 bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expectedreadlength ${params.expectedreadlength} ${params.extrabinparams} -slop ${params.slop} 
 """
 }
@@ -259,14 +261,14 @@ workflow {
 
     
     // working on linking bin_reads
-    def fq_glob = params.s3dir + '/' +  params.fqfile
-    println("fq_glob is: $fq_glob")
+    def fq_path = params.s3dir + '/' +  params.fqfile
+    println("fq_path is: $fq_path")
     println("depth is: $params.depth")
     
 
-    bin_reads_by_umi(fq_glob)
+   //bin_reads_by_umi(fq_path)
 
-    println("Exiting for now")
+    
     //System.exit(0)  
 
 
@@ -278,6 +280,7 @@ workflow {
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
 
+    println("Done for now")
     System.exit(0)
 
     
