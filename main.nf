@@ -70,9 +70,14 @@ println("params.path_ref is: $params.path_ref")
 ///////////////////////////////
 
 process bin_reads_by_umi {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
+    debug true
+    cpus 1
+    memory '6 GB'
+    label = [ 'process_medium', 'error_retry' ]
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
     publishDir = "${params.s3dir}"
-    println("header")
+    println("header in process bin_reads")
+    
     input:
     path this_fq
     
@@ -80,15 +85,14 @@ process bin_reads_by_umi {
     path "*cl=*reads.fq"
 
     script:
-    println("in script")
-"""
-
+    """
+echo ${this_fq}
 bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expectedreadlength ${params.expectedreadlength} ${params.extrabinparams} -slop ${params.slop} 
 """
 }
 
 process bcftools_csq {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
     publishDir = "${params.s3dir}"
     label = [ 'process_low', 'error_retry' ]      
     
@@ -109,7 +113,7 @@ bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out
 process ngmlr {
     cpus 8
     memory '6 GB'
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
     label = [ 'process_medium', 'error_retry' ]
     
     input:
@@ -129,7 +133,7 @@ ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Or
 }
 
 process samtools_post_process {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
     label = [ 'process_medium', 'error_retry' ]    
 	
     input:
@@ -149,7 +153,7 @@ samtools index ${this_sam}.rg.sort.bam
 
 process index_reference {
     debug true
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsNgmlrSamBcftools'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
     publishDir = "${params.s3dir}"
     label = [ 'process_low', 'error_retry' ]
     //stageOutMode = 'copy'
@@ -245,6 +249,19 @@ for i in ${x}; do head -4 \$i | cut -c 1-10 > test.\$i.txt ; done
 """
 }
     
+    process list_file{
+        debug true
+        input:
+        path a_file
+        output:
+        path "out.txt"
+        script:
+        """
+        echo HELLO
+        ls -ltrh ${a_file} > out.txt
+        """
+
+    }
 // main workflow
 //////////////////////
 
@@ -262,12 +279,16 @@ workflow {
     
     // working on linking bin_reads
     def fq_path = params.s3dir + '/' +  params.fqfile
+    def fq_chann = Channel.fromPath(fq_path)
+    println("s3dir is ${params.s3dir}")
+    println("fqfile is ${params.fqfile}")
     println("fq_path is: $fq_path")
     println("depth is: $params.depth")
     
-
-   //bin_reads_by_umi(fq_path)
-
+    //list_file(fq_chann)
+    
+    bin_reads_by_umi(fq_chann)
+    println("after bin_reads call BHGF")
     
     //System.exit(0)  
 
@@ -280,11 +301,11 @@ workflow {
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
 
-    println("Done for now")
-    System.exit(0)
+    //println("Done for now")
+    //System.exit(0)
 
     
-    ngmlr(fq_files,params.path_ref, params.enc, params.ht)  | samtools_post_process
+    ngmlr(fq_chann,params.path_ref, params.enc, params.ht)  | samtools_post_process
 
 /*
 //    println("** Overwriting intervals **")
