@@ -48,14 +48,16 @@ println("params.s3dir is: ${params.s3dir}")
 println("params.abc is: ${params.abc}")
 */
 
+params.extrabinparams = ''
+
 params.path_ref = "${params.s3dir}/${params.ref}"
 params.path_gff3 = "${params.s3dir}/${params.gff3}"
 params.enc = "${params.path_ref}-enc.2.ngm"
 params.ht  = "${params.path_ref}-ht-13-2.2.ngm"
 //params.fai = "${params.path_ref}.fai"    // *** this adds .fai to fa filename
-
-println("This is the ONT-UMI pipeline")
-println("===================================")
+println("====================================")
+println("=   This is the ONT-UMI pipeline   =")
+println("====================================")
 
 
 println("projectDir (main.script.nf in here) is: $projectDir")
@@ -74,25 +76,25 @@ process bin_reads_by_umi {
     cpus 1
     memory '6 GB'
     label = [ 'process_medium', 'error_retry' ]
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
     println("header in process bin_reads")
     
     input:
     path this_fq
+    path this_gb
     
     output:
     path "*cl=*reads.fq"
 
     script:
     """
-echo ${this_fq}
-bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expectedreadlength ${params.expectedreadlength} ${params.extrabinparams} -slop ${params.slop} 
+bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expectedreadlength ${params.expreadlen} ${params.extrabinparams} -slop ${params.slop} 
 """
 }
 
 process bcftools_csq {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
     label = [ 'process_low', 'error_retry' ]      
     
@@ -113,7 +115,7 @@ bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out
 process ngmlr {
     cpus 8
     memory '6 GB'
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     label = [ 'process_medium', 'error_retry' ]
     
     input:
@@ -133,7 +135,7 @@ ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Or
 }
 
 process samtools_post_process {
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     label = [ 'process_medium', 'error_retry' ]    
 	
     input:
@@ -153,7 +155,7 @@ samtools index ${this_sam}.rg.sort.bam
 
 process index_reference {
     debug true
-    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
     label = [ 'process_low', 'error_retry' ]
     //stageOutMode = 'copy'
@@ -278,6 +280,7 @@ workflow {
 
     
     // working on linking bin_reads
+    def gb_path = params.s3dir + '/' + params.gb
     def fq_path = params.s3dir + '/' +  params.fqfile
     def fq_chann = Channel.fromPath(fq_path)
     println("s3dir is ${params.s3dir}")
@@ -287,32 +290,23 @@ workflow {
     
     //list_file(fq_chann)
     
-    bin_reads_by_umi(fq_chann)
+    bin_reads_by_umi(fq_chann, gb_path)
     println("after bin_reads call BHGF")
     
-    //System.exit(0)  
-
-
-    // can't do this
-    //def fasta_ref_channel = Channel.fromPath(params.ref)
-    //index_reference(fasta_ref_channel)
-    //System.exit(0)
 
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
 
-    //println("Done for now")
-    //System.exit(0)
-
+    //def binned_fq_chann = Channel.fromPath(bin_reads_by_umi.out)
     
-    ngmlr(fq_chann,params.path_ref, params.enc, params.ht)  | samtools_post_process
+    ngmlr(bin_reads_by_umi.out, params.path_ref, params.enc, params.ht)  | samtools_post_process
 
-/*
-//    println("** Overwriting intervals **")
-//    params.intervals = "pBB0212:5400-5450"
-*/
     haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out )
     bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller.out )
+
+
+
+
 
     // below is testing just bcftools csq piece
     //bcftools_csq( params.path_ref, params.path_gff3 , "${launchDir}/gatk.out.vcf" )
