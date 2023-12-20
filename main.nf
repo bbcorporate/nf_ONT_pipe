@@ -75,7 +75,7 @@ process bin_reads_by_umi {
     debug true
     cpus 1
     memory '6 GB'
-    label = [ 'process_medium', 'error_retry' ]
+    //label = [ 'process_medium', 'error_retry' ]
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
     println("header in process bin_reads")
@@ -96,7 +96,9 @@ bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expect
 process bcftools_csq {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
-    label = [ 'process_low', 'error_retry' ]      
+    cpus 1
+    memory '1 GB'
+    //label = [ 'process_ultralow', 'error_retry' ]      
     
     input:
     path this_ref
@@ -116,7 +118,7 @@ process ngmlr {
     cpus 8
     memory '6 GB'
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
-    label = [ 'process_medium', 'error_retry' ]
+    //label = [ 'process_medium', 'error_retry' ]
     
     input:
     path this_fq
@@ -136,7 +138,7 @@ ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Or
 
 process samtools_post_process {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
-    label = [ 'process_medium', 'error_retry' ]    
+    label = [ 'process_ultralow', 'error_retry' ]    
 	
     input:
     path this_sam
@@ -153,18 +155,25 @@ samtools index ${this_sam}.rg.sort.bam
 """
 }
 
+
 process index_reference {
+    // outputs reference fa file 
+    // AND
+    // index .fai file
     debug true
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
-    label = [ 'process_low', 'error_retry' ]
+    label = [ 'process_ultralow', 'error_retry' ]
     //stageOutMode = 'copy'
     
     input:
     path this_ref
     
     output:
+    //path this_ref
     path "${this_ref}.fai"
+    
+
     script:
     """
 samtools faidx $this_ref
@@ -180,8 +189,9 @@ process create_seq_dict {
     // use the gatk4 container, just not the nf-core modules, which
     // are so slow it's not even a joke
     container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
-    label = [ 'process_medium', 'error_retry' ]    
-
+    //label = [ 'process_medium', 'error_retry' ]    
+    cpus 1
+    memory '1 GB'
     publishDir = "$launchDir"
     input:
     path this_ref
@@ -196,8 +206,10 @@ gatk CreateSequenceDictionary -R $this_ref
 process haplotype_caller {
     container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
     publishDir = "$launchDir"
-    label = [ 'process_medium', 'error_retry' ]
-    
+    //label = [ 'process_medium', 'error_retry' ]
+    cpus 1
+    memory '1GB'
+
     input:
     path sorted_bam
     path sorted_bam_bai
@@ -205,9 +217,10 @@ process haplotype_caller {
     path path_ref
     path path_ref_index
     path path_ref_dict
-    
+
     output:
     path "${sorted_bam}.vcf"
+    //path path_ref
 
     script:
     
@@ -290,18 +303,24 @@ workflow {
     
     //list_file(fq_chann)
     
+/*   NOT USING THIS FOR NOW.
+CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
     bin_reads_by_umi(fq_chann, gb_path)
-    println("after bin_reads call BHGF")
-    
+    //println("after bin_reads call BHGF")
+*/
 
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
+    
 
     //def binned_fq_chann = Channel.fromPath(bin_reads_by_umi.out)
     
-    ngmlr(bin_reads_by_umi.out, params.path_ref, params.enc, params.ht)  | samtools_post_process
-
+    //ngmlr(bin_reads_by_umi.out, params.path_ref, params.enc, params.ht)  | samtools_post_process
+//CONNECT TO PRE-EXISTING OUTPUT FILES FROM BIN_UMI - SEE ABOVE
+    def existing_cluster_fq = Channel.fromPath("$launchDir/GANDER_1_cl=?_*reads.fq")
+    ngmlr(existing_cluster_fq, params.path_ref, params.enc, params.ht)  | samtools_post_process
     haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out )
+    //haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], index_reference.out[0], index_reference.out[1], create_seq_dict.out, params.intervals )
     bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller.out )
 
 
