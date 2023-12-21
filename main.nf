@@ -87,6 +87,7 @@ bin_reads_by_umi.py -d ${params.depth} -gb ${params.gb}  -fq ${this_fq}  -expect
 process bcftools_csq {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
+    debug true
     cpus 1
     memory '1 GB'
     //label = [ 'process_ultralow', 'error_retry' ]      
@@ -97,11 +98,23 @@ process bcftools_csq {
     path gatk_vcf_out
     
     output:
-    path "${gatk_vcf_out}.csq.ann.vcf"
+    path "*.csq.ann.vcf"
+
+    stub:
+    println("In bcf_csq gatk_vcf_out is ${gatk_vcf_out}")
+    """
+    for vcf_name in ${gatk_vcf_out.join(' ')}; do
+        echo STUB
+        touch \$vcf_name.csq.ann.vcf
+    done
+
+"""
 
     script:
     """
-bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out}.csq.ann.vcf ${gatk_vcf_out} 
+for vcf_name in ${gatk_vcf_out.join(' ')}; do
+    bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o \$vcf_name.csq.ann.vcf \$vcf_name
+done
 """
 }
 process show_thing { 
@@ -178,6 +191,22 @@ process make_ngmlr_filenames {
     date
     ''' 
 }
+process make_bcftools_filenames {
+    cpus 1
+    memory '10 MB'
+    input:
+    path this_vcf
+    output:
+    val params.path_ref
+    val params.path_gff3
+    path this_vcf
+
+    script:
+    println("bcf filenames this_vcf are ${this_vcf}")
+    """
+    date 
+    """
+ }
 
 process make_gatk_filenames {
     cpus 1
@@ -237,7 +266,7 @@ ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Or
 }
 
 process ngmlr_samtools_batch {
-    cpus 10
+    cpus 9
     memory '6 GB'
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     debug true
@@ -261,11 +290,11 @@ process ngmlr_samtools_batch {
     """
     for fq_name in ${this_fq_batch.join(' ')}; do
         #echo IN \$PWD NGMLR_BATCH: this fq file is \$fq_name
-        ngmlr -x ont -q \$fq_name  -r ${this_ref} -o \$fq_name.ngmlr.rg.sam  --rg-id Orders_Q8D_1_Pool_1  --rg-sm sample1  --rg-lb library1  --rg-pl ONT -t 10
+        ngmlr -x ont -q \$fq_name  -r ${this_ref} -o \$fq_name.ngmlr.rg.sam  --rg-id Orders_Q8D_1_Pool_1  --rg-sm sample1  --rg-lb library1  --rg-pl ONT -t 9
         samtools view -b \$fq_name.ngmlr.rg.sam > \$fq_name.ngmlr.rg.bam
         samtools sort \$fq_name.ngmlr.rg.bam > \$fq_name.rg.sort.bam
         samtools index \$fq_name.rg.sort.bam
-        echo wrote \$fq_name.rg.sort.bam and .bam.bai
+        #echo wrote \$fq_name.rg.sort.bam and .bam.bai
     done
 """
 
@@ -504,9 +533,13 @@ CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
     //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | show_six
 
     //makes vcf files
-    existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch
+    //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch
+
+    // goes to annotated vcf files
+    existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch | make_bcftools_filenames | bcftools_csq
+    
     // try simple connection to this
-    bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller_batch.out )
+    //bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller_batch.out )
 
 
     //def vcf_files =Channel.fromPath(haplotype_caller_batch.out)
