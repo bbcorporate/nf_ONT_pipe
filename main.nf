@@ -355,6 +355,13 @@ process haplotype_caller_batch  {
     path "*.vcf"
     //path path_ref
 
+    stub:
+    """
+    for bam_name in ${sorted_bam.join(' ')}; do
+        echo STUB
+        touch \$bam_name.vcf
+    done
+"""
     script:
     
 	"""
@@ -498,9 +505,13 @@ CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
 
     //makes vcf files
     existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch
+    // try simple connection to this
+    bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller_batch.out )
 
-    def vcf_files 
 
+    //def vcf_files =Channel.fromPath(haplotype_caller_batch.out)
+    // try something like this 
+    // vcf_files | buffer (size: buffer_size, remainder: true) | 
 
     /*
     // took out params.path_ref, 
