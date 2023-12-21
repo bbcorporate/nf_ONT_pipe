@@ -14,17 +14,6 @@
 // launchDir   The directory where the workflow is run (requires version 20.04.0 or later).
 // projectDir  The directory where the main script is located (previously baseDir)
 
-
-
-
-// include modules we need
-//include { GATK4_CREATESEQUENCEDICTIONARY } from './modules/nf-core/gatk4/createsequencedictionary/main'
-//include { GATK4_HAPLOTYPECALLER } from './modules/nf-core/gatk4/haplotypecaller/main'  
-
-
-
-
-
 // use this as a path, so needs to be absolute
 // params.ref = "/Users/simonp/serenity_projects/birchbio/testingNF+Docker2/pBB0212.withCDSsf.noVERSION.resetOri.fa"
 // replace with implicit variable
@@ -47,6 +36,8 @@ println("params.s3dir is: ${params.s3dir}")
 
 println("params.abc is: ${params.abc}")
 */
+
+def buffer_size = 2
 
 params.extrabinparams = ''
 
@@ -113,6 +104,112 @@ process bcftools_csq {
 bcftools csq -p a  -f ${this_ref} -g ${this_gff3}  --verbose 2 -o ${gatk_vcf_out}.csq.ann.vcf ${gatk_vcf_out} 
 """
 }
+process show_thing { 
+     cpus 1
+    memory '10 MB'
+    debug true
+    
+    input:
+    val p1
+
+    script:
+    println("thing is ${p1}")
+    """
+    date
+    """
+}
+process show_six {
+    cpus 1
+    memory '10 MB'
+    debug true
+    
+    input:
+    val p1
+    val p2
+    val p3
+    val p4
+    val p5
+    val p6
+
+    script:
+    println("p1 is ${p1}")
+    println("p2 is ${p2}")
+    println("p3 is ${p3}")
+    println("p4 is ${p4}")
+    println("p5 is ${p5}")
+    println("p6 is ${p6}")
+    """
+    """
+
+
+}
+process show_this {
+    cpus 1 
+    memory '10 MB'
+    input:
+    val f1
+    val f2
+    val f3
+    val f4
+
+    script:
+    println("f1 is $f1")
+    println("f2 is $f2")
+    println("f3 is $f3")
+    println("f4 is $f4")
+    """
+    echo ${f1}
+    """
+}
+process make_ngmlr_filenames {
+    cpus 1
+    memory '10 MB'
+    input:
+    path this_fq
+
+    output:
+    path this_fq
+    val params.path_ref
+    val params.enc
+    val params.ht
+
+    script:
+    '''
+    date
+    ''' 
+}
+
+process make_gatk_filenames {
+    cpus 1
+    memory '10 MB'
+
+    input:
+    path this_bam  // was path this_bam -- it's a list
+    path this_bai
+
+    output:
+    path this_bam
+    path this_bai // was added_bai  // can't add suffix to each member of a list like ${this_bam}.bai
+    val params.intervals
+    val params.path_ref
+    val "${params.path_ref}.fai"
+    val params.path_ref.replace('.fa','.dict') //seriously
+
+/*
+    exec:   // just run groovy code
+    //added_bai = this_bam.collect(it + '.bai')
+    //println(this_bam.getClass())
+    //println("Working in ${workflow.workDir}")
+    println("IN make_gatk_filename{}")
+    //println("IN MAKE_GATK_FLNM: task workdir is ${task.workDir}")
+    */
+    
+    script:
+    added_bai = this_bam.collect {"${params.s3dir}/${it}.bai"}   // was .join(' ')
+    """
+    date
+    """
+}
 
 process ngmlr {
     cpus 8
@@ -130,12 +227,49 @@ process ngmlr {
     path "${this_fq}.ngmlr.rg.sam"
     
     script:
+    //was -r ${this_ref} 
+    // then ${params.path_ref}  // but container won't find the path, even though I can tab complete and then find it.
+    // -r ../../../${params.ref}  // this works, but still need to handle the enc and ht files
     """
 ngmlr -x ont -r ${this_ref} -q ${this_fq} -o ${this_fq}.ngmlr.rg.sam  --rg-id Orders_Q8D_1_Pool_1  --rg-sm sample1  --rg-lb library1  --rg-pl ONT -t 8
 """
 
 }
 
+process ngmlr_samtools_batch {
+    cpus 10
+    memory '6 GB'
+    container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
+    debug true
+    //publishDir = "${params.s3dir}"
+    //label = [ 'process_medium', 'error_retry' ]
+    
+    input:
+    path this_fq_batch
+    path this_ref
+    path this_enc  // ngm index file
+    path this_ht   // ngm index file
+    
+    output:
+    path "*.rg.sort.bam"
+    path "*.rg.sort.bam.bai"  // make this in process make_gatk_filenames
+    
+    script:
+    //was -r ${this_ref} 
+    // then ${params.path_ref}  // but container won't find the path, even though I can tab complete and then find it.
+    // -r ../../../${params.ref}  // this works, but still need to handle the enc and ht files
+    """
+    for fq_name in ${this_fq_batch.join(' ')}; do
+        #echo IN \$PWD NGMLR_BATCH: this fq file is \$fq_name
+        ngmlr -x ont -q \$fq_name  -r ${this_ref} -o \$fq_name.ngmlr.rg.sam  --rg-id Orders_Q8D_1_Pool_1  --rg-sm sample1  --rg-lb library1  --rg-pl ONT -t 10
+        samtools view -b \$fq_name.ngmlr.rg.sam > \$fq_name.ngmlr.rg.bam
+        samtools sort \$fq_name.ngmlr.rg.bam > \$fq_name.rg.sort.bam
+        samtools index \$fq_name.rg.sort.bam
+        echo wrote \$fq_name.rg.sort.bam and .bam.bai
+    done
+"""
+
+}
 process samtools_post_process {
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     label = [ 'process_ultralow', 'error_retry' ]    
@@ -202,7 +336,35 @@ process create_seq_dict {
 gatk CreateSequenceDictionary -R $this_ref 
 """
 }
+process haplotype_caller_batch  {
+    container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
+    publishDir = "$launchDir"
+    //label = [ 'process_medium', 'error_retry' ]
+    cpus 1
+    memory '1GB'
 
+    input:
+    path sorted_bam
+    path sorted_bam_bai
+    val intervals
+    path path_ref
+    path path_ref_index
+    path path_ref_dict
+
+    output:
+    path "${sorted_bam}.vcf"
+    //path path_ref
+
+    script:
+    
+	"""
+    for bam_name in ${sorted_bam.join(' ')}; do
+        echo IN GATK_BATCH \$PWD : this bam file is \$bam_name
+        gatk --java-options "-Xmx4g" HaplotypeCaller -I \$bam_name -O \$bam_name.vcf -R $path_ref  -ploidy ${params.ploidy} -L $intervals  --disable-read-filter WellformedReadFilter --do-not-run-physical-phasing true
+    done
+"""
+    
+}
 process haplotype_caller {
     container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
     publishDir = "$launchDir"
@@ -284,12 +446,12 @@ workflow {
     // testing batches
     // this works
     // Channel.of(1..23).map { "this_is_batch ${it}" }.view()
-    // Channel.of(1..23)| buffer(size: 4, remainder: true) | map { "this is the batch ${it}" } | foo
+    // Channel.of(1..23)| buffer(size: buffer_size, remainder: true) | map { "this is the batch ${it}" } | foo
     // Channel.fromPath("testChunk*.fq") | ngmlr(...) | samtools_post_process
-    //Channel.of(1..23)| buffer(size: 4, remainder: true) | foo
+    //Channel.of(1..23)| buffer(size: buffer_size, remainder: true) | foo
     // this works to make buffers, but have to split the buffers further inside
     // the process zoo
-    //Channel.fromPath("seq*") | buffer(size: 4, remainder: true) | zoo
+    //Channel.fromPath("seq*") | buffer(size: buffer_size, remainder: true) | zoo
 
     
     // working on linking bin_reads
@@ -317,14 +479,36 @@ CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
     
     //ngmlr(bin_reads_by_umi.out, params.path_ref, params.enc, params.ht)  | samtools_post_process
 //CONNECT TO PRE-EXISTING OUTPUT FILES FROM BIN_UMI - SEE ABOVE
-    def existing_cluster_fq = Channel.fromPath("$launchDir/GANDER_1_cl=?_*reads.fq")
-    ngmlr(existing_cluster_fq, params.path_ref, params.enc, params.ht)  | samtools_post_process
+    def existing_cluster_fq = Channel.fromPath("$launchDir/GANDER_1_cl=?_*reads.snip.fq")
+    
+    
+    // this takes 7 input fq files, splits into buffers of 3 and adds the filenames needed to run ngmlr and prints out the filenames
+    // the first filename is a list
+    //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | show_this
+
+    //make a second buffer for the sorted bam files from samtools post processing
+    // we're making a list of lists
+    //  [[/Users/.../work/1b/76543f09caf1240c438aebd7ecfbff/GANDER_1_cl=1_735reads.fq.rg.sort.bam, /Users/.../work/1b/76543f09caf1240c438aebd7ecfbff/GANDER_1_cl=4_298reads.fq.rg.sort.bam, 
+    //  /Users/.../1b/76543f09caf1240c438aebd7ecfbff/GANDER_1_cl=8_2reads.fq.rg.sort.bam], /Users/simon... ]]
+    // => I don't need the second buffer()
+    //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | buffer(size: buffer_size, remainder: true) | show_thing
+
+    // this prints out six things 1,2 are lists, 3,4,5,6 are scalar things
+    //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | show_six
+
+    existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch
+
+
+    /*
+    // took out params.path_ref, 
+    // container can't find it, even though it's there!!!
+    // need to refer to it as ../../../theNameOfThe.fa
+    //ngmlr(existing_cluster_fq, params.path_ref, params.enc, params.ht)  | samtools_post_process
     haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out )
-    //haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], index_reference.out[0], index_reference.out[1], create_seq_dict.out, params.intervals )
+    //haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out,  )
     bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller.out )
 
-
-
+*/
 
 
     // below is testing just bcftools csq piece
