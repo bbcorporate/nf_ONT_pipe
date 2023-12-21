@@ -352,7 +352,7 @@ process haplotype_caller_batch  {
     path path_ref_dict
 
     output:
-    path "${sorted_bam}.vcf"
+    path "*.vcf"
     //path path_ref
 
     script:
@@ -496,7 +496,10 @@ CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
     // this prints out six things 1,2 are lists, 3,4,5,6 are scalar things
     //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | show_six
 
+    //makes vcf files
     existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch
+
+    def vcf_files 
 
 
     /*
@@ -505,7 +508,7 @@ CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
     // need to refer to it as ../../../theNameOfThe.fa
     //ngmlr(existing_cluster_fq, params.path_ref, params.enc, params.ht)  | samtools_post_process
     haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out )
-    //haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out,  )
+    //haplotype_caller( samtools_post_process.out[0] , samtools_post_process.out[1], params.intervals, params.path_ref, index_reference.out, create_seq_dict.out  )
     bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller.out )
 
 */
