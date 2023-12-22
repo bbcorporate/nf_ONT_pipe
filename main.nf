@@ -515,7 +515,7 @@ CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
     
     //ngmlr(bin_reads_by_umi.out, params.path_ref, params.enc, params.ht)  | samtools_post_process
 //CONNECT TO PRE-EXISTING OUTPUT FILES FROM BIN_UMI - SEE ABOVE
-    def existing_cluster_fq = Channel.fromPath("$launchDir/GANDER_1_cl=?_*reads.snip.fq")
+    def existing_cluster_fq = Channel.fromPath("${params.s3dir}/GANDER_1_cl=?_*reads.snip.fq")
     
     
     // this takes 7 input fq files, splits into buffers of 3 and adds the filenames needed to run ngmlr and prints out the filenames
