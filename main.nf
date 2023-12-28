@@ -177,7 +177,10 @@ process show_this {
 process make_ngmlr_filenames {
     cpus 1
     memory '1 GB'
-    container 'ubuntu'
+    //container 'ubuntu'
+    //try local execution
+    executor 'local'  // which should be the aws batch computer that's managing the pipeline
+
     input:
     path this_fq
 
