@@ -176,7 +176,7 @@ process show_this {
 }
 process make_ngmlr_filenames {
     cpus 1
-    memory '10 MB'
+    memory '1 GB'
     container 'ubuntu'
     input:
     path this_fq
@@ -194,7 +194,8 @@ process make_ngmlr_filenames {
 }
 process make_bcftools_filenames {
     cpus 1
-    memory '10 MB'
+    memory '1 GB'
+    container 'ubuntu'
     input:
     path this_vcf
     output:
@@ -211,8 +212,9 @@ process make_bcftools_filenames {
 
 process make_gatk_filenames {
     cpus 1
-    memory '10 MB'
-
+    memory '1 GB'
+    container 'ubuntu'
+    
     input:
     path this_bam  // was path this_bam -- it's a list
     path this_bai
