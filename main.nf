@@ -177,6 +177,7 @@ process show_this {
 process make_ngmlr_filenames {
     cpus 1
     memory '10 MB'
+    container 'ubuntu'
     input:
     path this_fq
 
