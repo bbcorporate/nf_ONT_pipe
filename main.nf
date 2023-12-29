@@ -177,10 +177,10 @@ process show_this {
 process make_ngmlr_filenames {
     cpus 1
     memory '1 GB'
-    //container 'ubuntu'
-    //try local execution
-    executor 'local'  // which should be the aws batch computer that's managing the pipeline
-
+    container 'ubuntu'
+    //tried local execution
+    // executor 'local'  // which should be the aws batch computer that's managing the pipeline
+                         // nope, needs Fusion filesystem installed to use S3 and wave containers and .... not doing this
     input:
     path this_fq
 
