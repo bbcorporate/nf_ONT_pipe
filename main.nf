@@ -118,7 +118,7 @@ done
 """
 }
 process show_thing { 
-     cpus 1
+    cpus 1
     memory '10 MB'
     debug true
     
@@ -180,7 +180,9 @@ process make_ngmlr_filenames {
     container 'ubuntu'
     //tried local execution
     // executor 'local'  // which should be the aws batch computer that's managing the pipeline
-                         // nope, needs Fusion filesystem installed to use S3 and wave containers and .... not doing this
+                         // nope, needs Fusion filesystem installed to use S3 and wave **containers** and .... not doing this
+                         // because I'm trying to get away from containers!
+                         // other ideas??
     input:
     path this_fq
 
@@ -361,7 +363,7 @@ process create_seq_dict {
     //label = [ 'process_medium', 'error_retry' ]    
     cpus 1
     memory '1 GB'
-    publishDir = "$launchDir"
+    publishDir = "${params.s3dir}"
     input:
     path this_ref
     output:
