@@ -37,7 +37,7 @@ println("params.s3dir is: ${params.s3dir}")
 println("params.abc is: ${params.abc}")
 */
 
-def buffer_size = 2
+def buffer_size = 1000
 
 //params.extrabinparams = ''
 //println("I found ignoresuffix ${params.ignoresuffix}")
