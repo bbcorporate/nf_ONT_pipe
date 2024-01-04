@@ -69,7 +69,7 @@ process bin_reads_by_umi {
     //label = [ 'process_medium', 'error_retry' ]
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
-    println("header in process bin_reads")
+    //println("header in process bin_reads")
     
     input:
     path this_fq
