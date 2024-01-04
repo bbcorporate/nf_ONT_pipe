@@ -498,34 +498,27 @@ workflow {
     //Channel.fromPath("seq*") | buffer(size: buffer_size, remainder: true) | zoo
 
     
-    // working on linking bin_reads
     def gb_path = params.s3dir + '/' + params.gb
     def fq_path = params.s3dir + '/' +  params.fqfile
-    def fq_chann = Channel.fromPath(fq_path)
+   
     println("s3dir is ${params.s3dir}")
     println("fqfile is ${params.fqfile}")
     println("fq_path is: $fq_path")
     println("depth is: $params.depth")
     
-    //list_file(fq_chann)
-    
-/*   NOT USING THIS FOR NOW.
-CONNECT OUTPUT BACK TO NGMLR WHEN BATCHES ARE FIXED UP
+    def fq_chann = Channel.fromPath(fq_path)
     bin_reads_by_umi(fq_chann, gb_path)
-    //println("after bin_reads call BHGF")
-*/
 
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
     
-
-    //def binned_fq_chann = Channel.fromPath(bin_reads_by_umi.out)
+    // make channel of fq files binned by UMI (output files from bin_reads_by_umi process)
+    def existing_cluster_fq = Channel.fromPath(bin_reads_by_umi.out)
     
     //ngmlr(bin_reads_by_umi.out, params.path_ref, params.enc, params.ht)  | samtools_post_process
-//CONNECT TO PRE-EXISTING OUTPUT FILES FROM BIN_UMI - SEE ABOVE
-    def existing_cluster_fq = Channel.fromPath("${params.s3dir}/GANDER_1_cl=?_*reads.snip.fq")
-    
-    
+    //was using next line when bin_reads step wasn't connected yet
+    // def existing_cluster_fq = Channel.fromPath("${params.s3dir}/GANDER_1_cl=?_*reads.snip.fq")
+      
     // this takes 7 input fq files, splits into buffers of 3 and adds the filenames needed to run ngmlr and prints out the filenames
     // the first filename is a list
     //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | show_this
