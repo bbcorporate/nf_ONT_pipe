@@ -506,9 +506,13 @@ workflow {
     println("fq_path is: $fq_path")
     println("depth is: $params.depth")
     
-    def fq_chann = Channel.fromPath(fq_path)
+    def fq_chann = Channel.fromPath(fq_path)  // for single big input fq file
     bin_reads_by_umi(fq_chann, gb_path)
 
+
+/* 
+TRY TO GET ABOVE CODE TO WORK FIRST
+THEN ADD THE STEPS BELOW 
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
     
@@ -538,7 +542,13 @@ workflow {
 
     // goes to annotated vcf files
     existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch | make_bcftools_filenames | bcftools_csq
-    
+
+
+END OF TEMP COMMENT OUT REGION
+   */
+
+
+
     // try simple connection to this
     //bcftools_csq( params.path_ref, params.path_gff3 , haplotype_caller_batch.out )
 
