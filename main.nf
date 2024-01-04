@@ -79,7 +79,7 @@ println("params.path_ref is: $params.path_ref")
 process bin_reads_by_umi {
     debug true
     cpus 1
-    memory '16 GB'
+    memory '32 GB'
     //label = [ 'process_medium', 'error_retry' ]
     container '454262641088.dkr.ecr.us-west-1.amazonaws.com/nf_ont_pipe_ecr:binReadsComplete3'
     publishDir = "${params.s3dir}"
