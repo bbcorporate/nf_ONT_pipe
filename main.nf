@@ -375,7 +375,7 @@ gatk CreateSequenceDictionary -R $this_ref
 }
 process haplotype_caller_batch  {
     container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
-    publishDir = "$launchDir"
+    // publishDir = "${params.s3dir}"  // don't need to save raw VCF files to publishDir
     //label = [ 'process_medium', 'error_retry' ]
     cpus 1
     memory '1GB'
@@ -411,7 +411,7 @@ process haplotype_caller_batch  {
 }
 process haplotype_caller {
     container 'quay.io/biocontainers/gatk4:4.4.0.0--py36hdfd78af_0'
-    publishDir = "$launchDir"
+    // publishDir = "${params.s3dir}"   // was "$launchDir" for most of these processes, don't need to save vcf files to publishDir
     //label = [ 'process_medium', 'error_retry' ]
     cpus 1
     memory '1GB'
@@ -457,7 +457,7 @@ echo "echo data is: '${x}'"
 
 process zoo {
     debug true
-    publishDir = "$launchDir"
+    publishDir = "$launchDir"   // change to "${params.s3dir}" if working with EC2/S3
     label = [ 'process_ultralow', 'error_retry' ]
     
     input:
