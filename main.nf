@@ -507,13 +507,36 @@ workflow {
     println("depth is: $params.depth")
     
     def fq_chann = Channel.fromPath(fq_path)  // for single big input fq file
-    bin_reads_by_umi(fq_chann, gb_path)
+    // works on its own
+    //bin_reads_by_umi(fq_chann, gb_path) 
 
-    // make channel of fq files binned by UMI (output files from bin_reads_by_umi process)
-    def existing_cluster_fq = Channel.fromPath(bin_reads_by_umi.out)
-/* 
-TRY TO GET ABOVE CODE TO WORK FIRST
-THEN ADD THE STEPS BELOW 
+    // what about just sending this to later stages?
+    // nope still just [[ 3 files ]], no nested structure
+    // bin_reads_by_umi(fq_chann, gb_path) | buffer (size: buffer_size, remainder: true ) | show_thing
+
+    
+    //bin_reads_by_umi(fq_chann, gb_path) 
+
+
+    //bin_reads_by_umi.out.buffer(size:2, remainder: true) | show_thing
+    
+    // flatten idea, makes [ 2 files] , [ 1 file] -> better!
+    //bin_reads_by_umi(fq_chann, gb_path) | flatten | buffer(size:2, remainder: true) | show_thing
+
+    // works up to ngmlr_filenames
+    //bin_reads_by_umi(fq_chann, gb_path) | flatten | buffer(size:2, remainder: true) | make_ngmlr_filenames | show_this
+
+    // working towards this??
+    bin_reads_by_umi(fq_chann, gb_path) | flatten | buffer(size:2, remainder: true) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch | make_bcftools_filenames | bcftools_csq
+
+
+
+
+
+
+
+//TRY TO GET ABOVE CODE TO WORK FIRST
+//THEN ADD THE STEPS BELOW 
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
     
@@ -541,11 +564,25 @@ THEN ADD THE STEPS BELOW
     //existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch
 
     // goes to annotated vcf files
-    existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch | make_bcftools_filenames | bcftools_csq
+    // existing_cluster_fq | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch | make_bcftools_filenames | bcftools_csq
+
+    //work on connecting from output of binned fq files
+    //bin_reads_by_umi.out | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | ngmlr_samtools_batch | make_gatk_filenames | haplotype_caller_batch | make_bcftools_filenames | bcftools_csq
+
+    
+    // thing is just [[ 3 paths ]] - no nested structure, buffer part is only finding one element
+    //bin_reads_by_umi.out | buffer (size: buffer_size, remainder: true ) | show_thing  
+
+    // passing Channel object into Channel.fromPath, so just use bin_reads_by_umi.out,
+    // but that doesn't work -- see above :-()
+    //Channel.fromPath(bin_reads_by_umi.out) | buffer (size: buffer_size, remainder: true ) | show_thing
+
+    // not passing path variable here
+    //bin_reads_by_umi.out | buffer (size: buffer_size, remainder: true ) | make_ngmlr_filenames | show_this
 
 
-END OF TEMP COMMENT OUT REGION
-   */
+//END OF TEMP COMMENT OUT REGION
+   
 
 
 
