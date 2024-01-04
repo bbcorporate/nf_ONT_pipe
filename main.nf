@@ -509,15 +509,15 @@ workflow {
     def fq_chann = Channel.fromPath(fq_path)  // for single big input fq file
     bin_reads_by_umi(fq_chann, gb_path)
 
-
+    // make channel of fq files binned by UMI (output files from bin_reads_by_umi process)
+    def existing_cluster_fq = Channel.fromPath(bin_reads_by_umi.out)
 /* 
 TRY TO GET ABOVE CODE TO WORK FIRST
 THEN ADD THE STEPS BELOW 
     index_reference(params.path_ref)
     create_seq_dict(params.path_ref)
     
-    // make channel of fq files binned by UMI (output files from bin_reads_by_umi process)
-    def existing_cluster_fq = Channel.fromPath(bin_reads_by_umi.out)
+  
     
     //ngmlr(bin_reads_by_umi.out, params.path_ref, params.enc, params.ht)  | samtools_post_process
     //was using next line when bin_reads step wasn't connected yet
