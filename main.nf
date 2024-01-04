@@ -39,7 +39,21 @@ println("params.abc is: ${params.abc}")
 
 def buffer_size = 2
 
-params.extrabinparams = ''
+//params.extrabinparams = ''
+//println("I found ignoresuffix ${params.ignoresuffix}")
+
+
+if (params.ignoresuffix) {
+    params.extrabinparams = '-ignoresuffix'
+}
+else {
+    params.extrabinparams = ''
+}
+
+//println("I made ${params.extrabinparams}")
+
+
+
 
 params.path_ref = "${params.s3dir}/${params.ref}"
 params.path_gff3 = "${params.s3dir}/${params.gff3}"
